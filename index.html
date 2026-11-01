@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0e14">
 <title>🏎 29-0: Formula 2 Draft — Can You Sweep The Double Headers?</title>
 <meta name="description" content="Draft 84 GP2 and Formula 2 legends across 6 eras and try to win every sprint and feature race of the 29-race 2026 F2 calendar. 1 goal: 29-0.">
@@ -142,6 +142,9 @@
     gap: 8px;
   }
   .driver-card {
+    color: inherit;
+    font: inherit;
+    text-align: left;
     background: var(--panel2);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -259,6 +262,7 @@
     gap: 8px;
     margin-top: 12px;
   }
+  .btn-row[hidden] { display: none; }
   .btn-row .btn { flex: 1; }
   .race-log {
     max-height: 400px;
@@ -439,6 +443,8 @@
     padding: 4px;
   }
   .roster-chip {
+    border: 0;
+    font-family: inherit;
     background: var(--accent);
     color: #fff;
     padding: 4px 10px;
@@ -858,7 +864,8 @@ function renderDrivers() {
     const drivers = DRIVERS.filter(d => d.era === state.selectedEra);
     drivers.forEach(d => {
         const drafted = state.drafted.some(x => x.id === d.id);
-        const card = document.createElement('div');
+        const card = document.createElement('button');
+        card.type = 'button';
         card.className = 'driver-card' + (drafted ? ' drafted' : '');
         card.innerHTML = `
             <div class="ovr">${d.ovr}</div>
@@ -915,14 +922,14 @@ function updateDraftUI() {
     }
 
     // Show chips
-    const existingChips = status.querySelectorAll('.roster-chip');
-    existingChips.forEach(c => c.remove());
+    status.querySelectorAll('.roster').forEach(roster => roster.remove());
     if (n > 0) {
         const rosterDiv = document.createElement('div');
         rosterDiv.className = 'roster';
         rosterDiv.style.marginTop = '10px';
         state.drafted.forEach(d => {
-            const chip = document.createElement('span');
+            const chip = document.createElement('button');
+            chip.type = 'button';
             chip.className = 'roster-chip';
             chip.textContent = `${d.name} ${d.ovr}`;
             chip.onclick = () => undraftDriver(d.id);
@@ -961,6 +968,9 @@ $('start-btn').onclick = () => {
     state.season.standings[state.season.primaryDriver.id] = 0;
     state.drafted.forEach(d => state.season.standings[d.id] = 0);
 
+    ['season-wins', 'season-streak', 'season-points'].forEach(id => {
+        $(id).textContent = '0';
+    });
     switchScreen('season');
     $('race-counter').textContent = '1';
     $('race-counter-end') && ($('race-counter-end').textContent = '1');
@@ -986,9 +996,8 @@ function showNextRace() {
 $('race-btn').onclick = () => {
     const i = state.season.results.length;
     const race = SCHEDULE[i];
-    // Player uses best drafted driver as primary; pool of 6 allows occasional rotation
-    // For simplicity: use primary driver for entire season
-    const playerOVR = state.season.primaryDriver.ovr + totalBonus(state.season.allDrafted);
+    const drafted = state.season.allDrafted;
+    const playerOVR = drafted.reduce((sum, d) => sum + d.ovr, 0) / drafted.length + totalBonus(drafted);
     const result = simulateRace(playerOVR, race.type, state.rng, race.kind);
     const pts = pointsForPos(result.playerPos, race.kind);
     const win = result.playerPos === 1;
@@ -1137,6 +1146,8 @@ $('share-btn').onclick = () => {
         navigator.clipboard.writeText(text).then(() => {
             $('share-btn').textContent = '✅ Copied!';
             setTimeout(() => $('share-btn').textContent = '📋 Copy Share Text', 1500);
+        }).catch(() => {
+            alert(text);
         });
     } else {
         alert(text);
